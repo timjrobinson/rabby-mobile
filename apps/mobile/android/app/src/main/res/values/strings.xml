@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Rabby Wallet</string>
+    <string name="servicedesc">Rabby Wallet Payment Service</string>
+    <string name="aiddescription">RabbyPay</string>
 </resources>
