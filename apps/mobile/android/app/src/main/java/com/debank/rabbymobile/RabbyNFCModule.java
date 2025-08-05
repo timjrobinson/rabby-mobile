@@ -108,12 +108,30 @@ public class RabbyNFCModule extends ReactContextBaseJavaModule implements Activi
             }
             
             // Store wallet address in shared preferences for HCE service
+            Log.d(TAG, "startHCE - Received wallet address: " + walletAddress);
+            Log.d(TAG, "startHCE - Address is null: " + (walletAddress == null));
+            Log.d(TAG, "startHCE - Address is empty: " + (walletAddress != null && walletAddress.isEmpty()));
+            
             if (walletAddress != null && !walletAddress.isEmpty()) {
+                Log.d(TAG, "startHCE - Storing wallet address in SharedPreferences");
                 activity.getSharedPreferences("RabbyNFC", Activity.MODE_PRIVATE)
                     .edit()
                     .putString("walletAddress", walletAddress)
                     .apply();
-                Log.d(TAG, "Stored wallet address: " + walletAddress);
+                Log.d(TAG, "startHCE - Stored wallet address: " + walletAddress);
+                
+                // Verify it was stored
+                String verifyAddress = activity.getSharedPreferences("RabbyNFC", Activity.MODE_PRIVATE)
+                    .getString("walletAddress", "not_found");
+                Log.d(TAG, "startHCE - Verification read: " + verifyAddress);
+                
+                // Also send via broadcast as backup method
+                Intent broadcastIntent = new Intent("com.debank.rabbymobile.WALLET_ADDRESS_UPDATE");
+                broadcastIntent.putExtra("walletAddress", walletAddress);
+                activity.sendBroadcast(broadcastIntent);
+                Log.d(TAG, "startHCE - Sent wallet address via broadcast");
+            } else {
+                Log.e(TAG, "startHCE - WARNING: No wallet address provided, HCE will use default");
             }
 
             // Check if our HCE service is the default
@@ -150,6 +168,42 @@ public class RabbyNFCModule extends ReactContextBaseJavaModule implements Activi
             promise.resolve(true);
         } catch (Exception e) {
             promise.reject("NFC_ERROR", "Failed to stop HCE", e);
+        }
+    }
+    
+    @ReactMethod
+    public void setWalletAddress(String walletAddress, Promise promise) {
+        try {
+            Activity activity = getCurrentActivity();
+            if (activity == null) {
+                promise.reject("NO_ACTIVITY", "No activity available");
+                return;
+            }
+            
+            Log.d(TAG, "setWalletAddress - Storing wallet address: " + walletAddress);
+            
+            if (walletAddress != null && !walletAddress.isEmpty()) {
+                // Update the ContentProvider's static storage
+                RabbyWalletProvider.setWalletAddress(walletAddress);
+                
+                // Store in SharedPreferences
+                activity.getSharedPreferences("RabbyNFC", Activity.MODE_PRIVATE)
+                    .edit()
+                    .putString("walletAddress", walletAddress)
+                    .apply();
+                
+                // Also send via broadcast
+                Intent broadcastIntent = new Intent("com.debank.rabbymobile.WALLET_ADDRESS_UPDATE");
+                broadcastIntent.putExtra("walletAddress", walletAddress);
+                activity.sendBroadcast(broadcastIntent);
+                
+                Log.d(TAG, "setWalletAddress - Successfully stored and broadcast wallet address");
+                promise.resolve(true);
+            } else {
+                promise.reject("INVALID_ADDRESS", "Wallet address cannot be empty");
+            }
+        } catch (Exception e) {
+            promise.reject("NFC_ERROR", "Failed to set wallet address", e);
         }
     }
 

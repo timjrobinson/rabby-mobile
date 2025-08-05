@@ -4,6 +4,18 @@ import android.nfc.cardemulation.HostApduService;
 import android.os.Bundle;
 import android.util.Log;
 import android.content.SharedPreferences;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.database.Cursor;
+import android.net.Uri;
 
 import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactInstanceManager;
@@ -16,6 +28,8 @@ import java.util.Arrays;
 
 public class RabbyHostApduService extends HostApduService {
     private static final String TAG = "RabbyHCE";
+    private static final String CHANNEL_ID = "RabbyNFC";
+    private static final int NOTIFICATION_ID = 9999;
     
     // AID for FreePay (for testing compatibility)
     private static final String SELECT_AID = "00A40400";
@@ -32,25 +46,226 @@ public class RabbyHostApduService extends HostApduService {
     
     private boolean aidSelected = false;
     private boolean walletAddressSent = false;
+    private NotificationManager notificationManager;
+    private String currentWalletAddress = null;
+    
+    private BroadcastReceiver walletAddressReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("com.debank.rabbymobile.WALLET_ADDRESS_UPDATE".equals(intent.getAction())) {
+                String address = intent.getStringExtra("walletAddress");
+                if (address != null && !address.isEmpty()) {
+                    currentWalletAddress = address;
+                    Log.d(TAG, "Received wallet address via broadcast: " + address);
+                    // showDebugNotification("Address Updated", "Via broadcast: " + address.substring(0, 20) + "...");
+                    
+                    // Also store in SharedPreferences as backup
+                    getSharedPreferences("RabbyNFC", MODE_PRIVATE)
+                        .edit()
+                        .putString("walletAddress", address)
+                        .apply();
+                }
+            }
+        }
+    };
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "RabbyHostApduService created - AID: " + AID);
+        Log.d(TAG, "RabbyHostApduService onCreate - Service created");
+        Log.d(TAG, "RabbyHostApduService onCreate - AID: " + AID);
+        
+        // Initialize notification manager
+        // TEMPORARILY DISABLED to prevent crashes
+        // notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        // createNotificationChannel();
+        
+        // Test SharedPreferences access with a test value first
+        SharedPreferences prefs = getSharedPreferences("RabbyNFC", MODE_PRIVATE);
+        prefs.edit().putString("testKey", "testValue-" + System.currentTimeMillis()).apply();
+        String testValue = prefs.getString("testKey", "notFound");
+        Log.d(TAG, "SharedPreferences test - wrote and read: " + testValue);
+        
+        // Log current stored address when service starts
+        String storedAddress = prefs.getString("walletAddress", "none");
+        Log.d(TAG, "RabbyHostApduService onCreate - Current stored address: " + storedAddress);
+        
+        // Also try getting from Context.MODE_MULTI_PROCESS (deprecated but might help)
+        try {
+            // Try accessing SharedPreferences with different modes
+            SharedPreferences prefs2 = getApplicationContext().getSharedPreferences("RabbyNFC", MODE_PRIVATE);
+            String address2 = prefs2.getString("walletAddress", "none-from-app-context");
+            Log.d(TAG, "From application context: " + address2);
+        } catch (Exception e) {
+            Log.e(TAG, "Error accessing SharedPreferences from app context", e);
+        }
+        
+        // Show notification for debugging
+        // TEMPORARILY DISABLED
+        // showDebugNotification("HCE Service Started", "Stored address: " + storedAddress);
+        
+        // Register broadcast receiver for wallet address updates
+        IntentFilter filter = new IntentFilter("com.debank.rabbymobile.WALLET_ADDRESS_UPDATE");
+        if (Build.VERSION.SDK_INT >= 33) {
+            // For Android 13+ (API 33+), specify RECEIVER_NOT_EXPORTED since this is internal
+            ContextCompat.registerReceiver(this, walletAddressReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(walletAddressReceiver, filter);
+        }
+    }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        try {
+            unregisterReceiver(walletAddressReceiver);
+        } catch (Exception e) {
+            Log.e(TAG, "Error unregistering receiver", e);
+        }
+    }
+    
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "Rabby NFC Debug",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Debug notifications for NFC operations");
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+    
+    private void showDebugNotification(String title, String text) {
+        try {
+            Intent intent = new Intent();
+            intent.setClassName(getPackageName(), "com.debank.rabbymobile.MainActivity");
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
+                
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to show notification: " + title + " - " + text, e);
+        }
     }
     
     private String getWalletAddress() {
+        Log.d(TAG, "getWalletAddress - Starting address retrieval");
+        
+        // First try the broadcast receiver value
+        if (currentWalletAddress != null && !currentWalletAddress.isEmpty()) {
+            Log.d(TAG, "getWalletAddress - Using broadcast receiver address: " + currentWalletAddress);
+            return currentWalletAddress;
+        }
+        
+        // Try to get from ContentProvider
+        try {
+            // Use the package name to build the correct authority (handles debug/release)
+            String authority = getPackageName() + ".walletprovider";
+            Uri uri = Uri.parse("content://" + authority + "/wallet_address");
+            Log.d(TAG, "Querying ContentProvider at: " + uri);
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+            
+            if (cursor != null) {
+                try {
+                    if (cursor.moveToFirst()) {
+                        String address = cursor.getString(cursor.getColumnIndex("address"));
+                        if (address != null && !address.isEmpty() && !address.contains("0x0000")) {
+                            Log.d(TAG, "getWalletAddress - Got address from ContentProvider: " + address);
+                            currentWalletAddress = address; // Cache it
+                            return address;
+                        }
+                    }
+                } finally {
+                    cursor.close();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying ContentProvider", e);
+        }
+        
+        // Try to read MMKV files directly (since we can't use the MMKV library)
+        try {
+            // MMKV stores data in files, let's try to find and read them
+            java.io.File mmkvDir = new java.io.File(getApplicationInfo().dataDir + "/files/mmkv");
+            if (mmkvDir.exists()) {
+                Log.d(TAG, "getWalletAddress - MMKV directory exists");
+                String[] mmkvFiles = mmkvDir.list();
+                Log.d(TAG, "getWalletAddress - MMKV files: " + Arrays.toString(mmkvFiles));
+                
+                // The preference store would be in a file named "preference" or "mmkv.preference"
+                // But MMKV files are memory-mapped and encrypted, we can't read them directly
+                // We need to rely on other methods
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking MMKV storage", e);
+        }
+        
+        // Try main app SharedPreferences
+        try {
+            // Try the main app's SharedPreferences
+            SharedPreferences mainPrefs = getApplicationContext().getSharedPreferences("rabby", MODE_PRIVATE);
+            String currentAccount = mainPrefs.getString("currentAccount", null);
+            
+            Log.d(TAG, "getWalletAddress - Main app prefs currentAccount: " + (currentAccount != null ? currentAccount.substring(0, Math.min(currentAccount.length(), 100)) + "..." : "null"));
+            
+            if (currentAccount != null && currentAccount.contains("address")) {
+                // Parse the JSON to extract the address
+                int addressStart = currentAccount.indexOf("\"address\":\"");
+                if (addressStart != -1) {
+                    addressStart += 11;
+                    int addressEnd = currentAccount.indexOf("\"", addressStart);
+                    if (addressEnd != -1) {
+                        String extractedAddress = currentAccount.substring(addressStart, addressEnd);
+                        if (extractedAddress.startsWith("0x") && extractedAddress.length() == 42) {
+                            String fullAddress = "eip155:1:" + extractedAddress;
+                            Log.d(TAG, "getWalletAddress - Extracted address from main prefs: " + fullAddress);
+                            
+                            // Cache it for future use
+                            currentWalletAddress = fullAddress;
+                            return fullAddress;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading main app preferences", e);
+        }
+        
+        // Then try our NFC-specific SharedPreferences
+        Log.d(TAG, "getWalletAddress - Reading from RabbyNFC SharedPreferences");
         SharedPreferences prefs = getSharedPreferences("RabbyNFC", MODE_PRIVATE);
         String address = prefs.getString("walletAddress", null);
         
-        // If no address is stored, log error and return null
+        Log.d(TAG, "getWalletAddress - Raw value from SharedPreferences: " + address);
+        
+        // If no address is stored, return default
         if (address == null || address.isEmpty()) {
-            Log.e(TAG, "No wallet address stored in SharedPreferences!");
-            // Return a placeholder that indicates no wallet is available
+            Log.e(TAG, "getWalletAddress - No wallet address found in any storage!");
+            
+            // List all SharedPreferences files to help debug
+            try {
+                String[] prefsFiles = new java.io.File(getApplicationInfo().dataDir + "/shared_prefs").list();
+                Log.d(TAG, "Available SharedPreferences files: " + Arrays.toString(prefsFiles));
+            } catch (Exception e) {
+                Log.e(TAG, "Error listing SharedPreferences files", e);
+            }
+            
             address = "eip155:1:0x0000000000000000000000000000000000000000";
+            Log.e(TAG, "getWalletAddress - Using default address: " + address);
+        } else {
+            Log.d(TAG, "getWalletAddress - Successfully retrieved address: " + address);
         }
         
-        Log.d(TAG, "Using wallet address: " + address);
         return address;
     }
 
@@ -106,12 +321,21 @@ public class RabbyHostApduService extends HostApduService {
                         Log.d(TAG, "Received raw text command: " + data);
                         
                         if (data.equals("wallet:address")) {
-                            String walletAddress = getWalletAddress();
-                            byte[] addressBytes = walletAddress.getBytes("UTF-8");
+                            Log.i(TAG, "=============== WALLET ADDRESS REQUEST RECEIVED ===============");
+                            // showDebugNotification("Wallet Address Request", "Received wallet:address command");
                             
-                            Log.d(TAG, "Sending wallet address: " + walletAddress);
+                            String walletAddress = getWalletAddress();
+                            Log.i(TAG, "Wallet address to send: " + walletAddress);
+                            
+                            byte[] addressBytes = walletAddress.getBytes("UTF-8");
+                            Log.i(TAG, "Address bytes length: " + addressBytes.length);
+                            Log.i(TAG, "Address bytes hex: " + bytesToHex(addressBytes));
+                            
                             sendEventToJS("walletAddressSent", walletAddress);
                             walletAddressSent = true;
+                            
+                            Log.i(TAG, "=============== RETURNING WALLET ADDRESS ===============");
+                            // showDebugNotification("Address Sent", walletAddress.substring(0, 30) + "...");
                             
                             // Return just the address bytes without status bytes
                             return addressBytes;
@@ -128,18 +352,22 @@ public class RabbyHostApduService extends HostApduService {
             String command = parseCommand(commandApdu);
             
             if (command != null && command.contains("wallet:address")) {
+                Log.i(TAG, "=============== WALLET ADDRESS COMMAND (parseCommand) ===============");
                 if (!walletAddressSent) {
                     String walletAddress = getWalletAddress();
-                    byte[] addressBytes = walletAddress.getBytes("UTF-8");
+                    Log.i(TAG, "Wallet address to send: " + walletAddress);
                     
-                    Log.d(TAG, "Sending wallet address: " + walletAddress);
+                    byte[] addressBytes = walletAddress.getBytes("UTF-8");
+                    Log.i(TAG, "Address bytes length: " + addressBytes.length);
+                    
                     sendEventToJS("walletAddressSent", walletAddress);
                     walletAddressSent = true;
                     
+                    Log.i(TAG, "=============== RETURNING WALLET ADDRESS (parseCommand) ===============");
                     // Return just the address bytes without status bytes
                     return addressBytes;
                 } else {
-                    Log.d(TAG, "Wallet address already sent");
+                    Log.w(TAG, "Wallet address already sent - rejecting duplicate request");
                     return SW_COMMAND_NOT_SUPPORTED;
                 }
             }

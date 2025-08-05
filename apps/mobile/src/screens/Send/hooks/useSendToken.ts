@@ -368,11 +368,17 @@ export function useSendTokenForm({
   isForMultipleAddress = false,
   disableItemCheck,
   currentAccount,
+  initialAmount,
+  gasLimit,
+  gasPrice,
 }: {
   toAddress?: string;
   isForMultipleAddress: boolean;
   disableItemCheck?: ITokenCheck;
   currentAccount: Account;
+  initialAmount?: string;
+  gasLimit?: string;
+  gasPrice?: string;
 }) {
   const { t } = useTranslation();
 
@@ -1127,6 +1133,32 @@ export function useSendTokenForm({
     toAddress && handleFieldChange('to', toAddress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toAddress]);
+
+  useEffect(() => {
+    if (initialAmount) {
+      handleFieldChange('amount', initialAmount);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAmount]);
+
+  useEffect(() => {
+    if (gasLimit && screenState.estimatedGas === 0) {
+      putScreenState({ estimatedGas: parseInt(gasLimit, 10) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gasLimit]);
+
+  useEffect(() => {
+    if (gasPrice && screenState.selectedGasLevel) {
+      putScreenState({
+        selectedGasLevel: {
+          ...screenState.selectedGasLevel,
+          price: parseInt(gasPrice, 10),
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gasPrice]);
 
   const estimateGasOnChain = useCallback(
     async (input?: {

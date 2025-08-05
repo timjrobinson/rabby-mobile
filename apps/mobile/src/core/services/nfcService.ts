@@ -89,23 +89,28 @@ class NFCService extends EventEmitter {
   }
 
   async startHostCardEmulation(walletAddress?: string) {
+    console.log('[nfcService] startHostCardEmulation called with:', walletAddress);
+    
     if (!this.isInitialized) {
+      console.log('[nfcService] Not initialized, initializing first');
       await this.init();
     }
 
     try {
       if (this.isListening) {
+        console.log('[nfcService] Already listening, stopping first');
         await this.stopHostCardEmulation();
       }
 
+      console.log('[nfcService] Calling RabbyNFC.startHCE with:', walletAddress);
       await RabbyNFC.startHCE(walletAddress);
       this.isListening = true;
       this.store.lastReadTime = Date.now();
       console.log(
-        'NFC Host Card Emulation started - ready to receive payments',
+        '[nfcService] HCE started successfully - ready to receive payments',
       );
     } catch (error) {
-      console.error('Failed to start NFC HCE:', error);
+      console.error('[nfcService] Failed to start NFC HCE:', error);
       this.emit('error', { error: error as Error });
       this.isListening = false;
     }
@@ -120,6 +125,23 @@ class NFCService extends EventEmitter {
       console.log('NFC Host Card Emulation stopped');
     } catch (error) {
       console.error('Failed to stop NFC HCE:', error);
+    }
+  }
+
+  async setWalletAddress(walletAddress: string) {
+    console.log('[nfcService] Setting wallet address:', walletAddress);
+    
+    if (!this.isInitialized) {
+      console.log('[nfcService] Not initialized, initializing first');
+      await this.init();
+    }
+
+    try {
+      await RabbyNFC.setWalletAddress(walletAddress);
+      console.log('[nfcService] Wallet address set successfully');
+    } catch (error) {
+      console.error('[nfcService] Failed to set wallet address:', error);
+      throw error;
     }
   }
 

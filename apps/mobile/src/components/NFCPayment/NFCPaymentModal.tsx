@@ -12,8 +12,9 @@ import { useNFC } from '@/hooks/useNFC';
 import { AppColorsVariants } from '@/constant/theme';
 import { useTheme } from '@/hooks/theme';
 import LottieView from 'lottie-react-native';
-import { useCurrentAccount } from '@/hooks/account';
+import { currentAccountAtom } from '@/hooks/account';
 import { preferenceService } from '@/core/services';
+import { useAtom } from 'jotai';
 
 interface NFCPaymentModalProps {
   visible: boolean;
@@ -27,7 +28,7 @@ export function NFCPaymentModal({
   walletAddress,
 }: NFCPaymentModalProps) {
   const { colors } = useTheme();
-  const currentAccount = useCurrentAccount();
+  const [currentAccount] = useAtom(currentAccountAtom);
 
   // Also try getting from preference service as a fallback
   const [fallbackAddress, setFallbackAddress] = useState<string | null>(null);
@@ -45,13 +46,13 @@ export function NFCPaymentModal({
 
   // Log for debugging
   useEffect(() => {
-    console.log('NFCPaymentModal - Current account:', currentAccount);
-    console.log('NFCPaymentModal - Fallback address:', fallbackAddress);
-    console.log(
-      'NFCPaymentModal - Effective wallet address:',
-      effectiveWalletAddress,
-    );
-  }, [currentAccount, fallbackAddress, effectiveWalletAddress]);
+    console.log('[NFCPaymentModal] Current account:', currentAccount);
+    console.log('[NFCPaymentModal] Current account address:', currentAccount?.address);
+    console.log('[NFCPaymentModal] Fallback address:', fallbackAddress);
+    console.log('[NFCPaymentModal] Account address (combined):', accountAddress);
+    console.log('[NFCPaymentModal] Effective wallet address:', effectiveWalletAddress);
+    console.log('[NFCPaymentModal] Wallet address prop:', walletAddress);
+  }, [currentAccount, fallbackAddress, effectiveWalletAddress, accountAddress, walletAddress]);
   const {
     isSupported,
     isEnabled,

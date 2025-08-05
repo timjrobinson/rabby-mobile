@@ -89,6 +89,8 @@
 	<string>Rabby requires location access to enable secure Bluetooth communication with hardware wallets.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Rabby needs microphone access to record audio</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>$(PRODUCT_NAME) uses NFC to communicate with payment terminals</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SF-Pro-Rounded-Bold.otf</string>

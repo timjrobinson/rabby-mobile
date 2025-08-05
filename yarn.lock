@@ -7945,6 +7945,7 @@ __metadata:
     nock: ^13.3.1
     prettier: ^2.7.1
     prettier-plugin-packagejson: ^2.4.5
+    react-native-nfc-manager: ^3.16.2
     rimraf: ^3.0.2
     simple-git-hooks: ^2.8.0
     ts-node: ^10.9.1
@@ -30920,6 +30921,18 @@ __metadata:
     react: "*"
     react-native: ">=0.71.0"
   checksum: 1710fb8e1befa9c79c53b16b7b2095322a4ac609ee7fad44877f4e4034935d3c4f3620147b0c7922af7380ffa1bd60d4ce03deb084c6663d1c6b2a16030368dd
+  languageName: node
+  linkType: hard
+
+"react-native-nfc-manager@npm:^3.16.2":
+  version: 3.16.2
+  resolution: "react-native-nfc-manager@npm:3.16.2"
+  peerDependencies:
+    "@expo/config-plugins": 9 || 10
+  peerDependenciesMeta:
+    "@expo/config-plugins":
+      optional: true
+  checksum: d6632d2524a2821d471c869ebff498283c880df947e7e04f0b35f51d7fe1b6fae651b8adc7da5a82f1609cf7f09498192674373ababd88e283e0787c2020cf44
   languageName: node
   linkType: hard
 

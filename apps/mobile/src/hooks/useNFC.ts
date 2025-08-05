@@ -87,9 +87,11 @@ export function useNFC(options: UseNFCOptions = {}) {
     }
 
     try {
+      console.log('[useNFC] Starting HCE with wallet address:', walletAddress);
       setIsListening(true);
       await nfcService.startHostCardEmulation(walletAddress);
     } catch (error) {
+      console.error('[useNFC] Error starting HCE:', error);
       setIsListening(false);
       onError?.(error as Error);
     }

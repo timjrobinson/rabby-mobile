@@ -46,13 +46,20 @@ class RabbyNFCWrapper {
   }
 
   async startHCE(walletAddress?: string): Promise<void> {
+    console.log('[RabbyNFC] startHCE called with address:', walletAddress);
+    
     if (!this.isAvailable()) {
       throw new Error('RabbyNFC not available');
     }
+    
+    const addressToSend = walletAddress || '';
+    console.log('[RabbyNFC] Sending to native module:', addressToSend);
+    
     try {
-      await RabbyNFC.startHCE(walletAddress || '');
+      await RabbyNFC.startHCE(addressToSend);
+      console.log('[RabbyNFC] startHCE completed successfully');
     } catch (error) {
-      console.error('RabbyNFC.startHCE error:', error);
+      console.error('[RabbyNFC] startHCE error:', error);
       throw error;
     }
   }
@@ -63,6 +70,22 @@ class RabbyNFCWrapper {
       await RabbyNFC.stopHCE();
     } catch (error) {
       console.error('RabbyNFC.stopHCE error:', error);
+    }
+  }
+
+  async setWalletAddress(walletAddress: string): Promise<void> {
+    if (!this.isAvailable()) {
+      throw new Error('RabbyNFC not available');
+    }
+    
+    console.log('[RabbyNFC] Setting wallet address:', walletAddress);
+    
+    try {
+      await RabbyNFC.setWalletAddress(walletAddress);
+      console.log('[RabbyNFC] Wallet address set successfully');
+    } catch (error) {
+      console.error('[RabbyNFC] setWalletAddress error:', error);
+      throw error;
     }
   }
 

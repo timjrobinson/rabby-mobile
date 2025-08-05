@@ -71,6 +71,13 @@
         <meta-data android:name="android.nfc.cardemulation.host_apdu_service"
             android:resource="@xml/apduservice"/>
     </service>
+    
+    <!-- Wallet Provider for sharing wallet address with HCE service -->
+    <provider
+        android:name=".RabbyWalletProvider"
+        android:authorities="${applicationId}.walletprovider"
+        android:exported="false"
+        android:grantUriPermissions="true" />
     <provider
       android:name="androidx.core.content.FileProvider"
       android:authorities="${applicationId}.provider"

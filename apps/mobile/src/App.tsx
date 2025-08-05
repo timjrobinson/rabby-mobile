@@ -37,6 +37,7 @@ import { useIAPListener } from './hooks/iap/useIAPListener';
 import { useGasAccountInfo } from './screens/GasAccount/hooks';
 import { useIncreaseTxCountOnAppTop } from './components/RateModal/hooks';
 import { useIntervalSyncDDefaultRPCs } from './hooks/defaultRPCs';
+import { useNFCWalletSync } from './hooks/useNFCWalletSync';
 
 const rneuiTheme = createTheme({
   lightColors: {
@@ -68,6 +69,7 @@ function MainScreen({ rabbitCode }: AppProps) {
   useGasAccountInfo();
   useIncreaseTxCountOnAppTop({ isTop: true });
   useIntervalSyncDDefaultRPCs();
+  useNFCWalletSync();
 
   const initAccounts = useMemoizedFn(async () => {
     const accounts = await keyringService.getAllVisibleAccountsArray();
