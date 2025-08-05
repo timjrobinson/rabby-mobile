@@ -36,26 +36,5 @@ export function useNFCWalletSync() {
     } else {
       console.log('[useNFCWalletSync] No account available to sync');
     }
-  }, [currentAccount?.address]);
-  
-  // Also sync on mount
-  useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    const syncFromPreference = () => {
-      const account = preferenceService.getCurrentAccount();
-      if (account?.address) {
-        const walletAddress = `eip155:1:${account.address}`;
-        console.log('[useNFCWalletSync] Initial sync - updating NFC wallet address:', walletAddress);
-        nfcService.setWalletAddress(walletAddress).catch(error => {
-          console.error('[useNFCWalletSync] Initial sync - failed to update NFC wallet address:', error);
-        });
-      }
-    };
-    
-    // Sync immediately on mount
-    syncFromPreference();
-  }, []);
+  }, [currentAccount]);
 }
