@@ -89,7 +89,7 @@ public class RabbyNFCModule extends ReactContextBaseJavaModule implements Activi
     }
 
     @ReactMethod
-    public void startHCE(Promise promise) {
+    public void startHCE(String walletAddress, Promise promise) {
         try {
             Activity activity = getCurrentActivity();
             if (activity == null) {
@@ -105,6 +105,15 @@ public class RabbyNFCModule extends ReactContextBaseJavaModule implements Activi
             if (!nfcAdapter.isEnabled()) {
                 promise.reject("NFC_DISABLED", "NFC is disabled");
                 return;
+            }
+            
+            // Store wallet address in shared preferences for HCE service
+            if (walletAddress != null && !walletAddress.isEmpty()) {
+                activity.getSharedPreferences("RabbyNFC", Activity.MODE_PRIVATE)
+                    .edit()
+                    .putString("walletAddress", walletAddress)
+                    .apply();
+                Log.d(TAG, "Stored wallet address: " + walletAddress);
             }
 
             // Check if our HCE service is the default

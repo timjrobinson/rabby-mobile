@@ -4,12 +4,13 @@ import { nfcService } from '@/core/services/nfcService';
 
 export interface UseNFCOptions {
   autoStart?: boolean;
+  walletAddress?: string;
   onError?: (error: Error) => void;
   onStateChanged?: (enabled: boolean) => void;
 }
 
 export function useNFC(options: UseNFCOptions = {}) {
-  const { autoStart = false, onError, onStateChanged } = options;
+  const { autoStart = false, walletAddress, onError, onStateChanged } = options;
   const [isEnabled, setIsEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
@@ -87,12 +88,12 @@ export function useNFC(options: UseNFCOptions = {}) {
 
     try {
       setIsListening(true);
-      await nfcService.startHostCardEmulation();
+      await nfcService.startHostCardEmulation(walletAddress);
     } catch (error) {
       setIsListening(false);
       onError?.(error as Error);
     }
-  }, [isEnabled, isSupported, onError]);
+  }, [isEnabled, isSupported, walletAddress, onError]);
 
   const stopListening = useCallback(async () => {
     try {

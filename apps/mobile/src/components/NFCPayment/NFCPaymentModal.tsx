@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { useNFC } from '@/hooks/useNFC';
 import { AppColorsVariants } from '@/constant/theme';
 import { useTheme } from '@/hooks/theme';
 import LottieView from 'lottie-react-native';
+import { useCurrentAccount } from '@/hooks/account';
+import { preferenceService } from '@/core/services';
 
 interface NFCPaymentModalProps {
   visible: boolean;
@@ -22,9 +24,34 @@ interface NFCPaymentModalProps {
 export function NFCPaymentModal({
   visible,
   onClose,
-  walletAddress = 'eip155:1:0x3D3f9852310C5B360737Af841FBb61316534db23',
+  walletAddress,
 }: NFCPaymentModalProps) {
   const { colors } = useTheme();
+  const currentAccount = useCurrentAccount();
+
+  // Also try getting from preference service as a fallback
+  const [fallbackAddress, setFallbackAddress] = useState<string | null>(null);
+  useEffect(() => {
+    const account = preferenceService.getCurrentAccount();
+    if (account) {
+      setFallbackAddress(account.address);
+    }
+  }, []);
+
+  // Use the current account address or fall back to preference service
+  const accountAddress = currentAccount?.address || fallbackAddress;
+  const effectiveWalletAddress =
+    walletAddress || (accountAddress ? `eip155:1:${accountAddress}` : null);
+
+  // Log for debugging
+  useEffect(() => {
+    console.log('NFCPaymentModal - Current account:', currentAccount);
+    console.log('NFCPaymentModal - Fallback address:', fallbackAddress);
+    console.log(
+      'NFCPaymentModal - Effective wallet address:',
+      effectiveWalletAddress,
+    );
+  }, [currentAccount, fallbackAddress, effectiveWalletAddress]);
   const {
     isSupported,
     isEnabled,
@@ -33,6 +60,7 @@ export function NFCPaymentModal({
     stopListening,
     openNFCSettings,
   } = useNFC({
+    walletAddress: effectiveWalletAddress,
     onError: error => {
       console.error('NFC Error:', error);
     },
@@ -48,6 +76,8 @@ export function NFCPaymentModal({
       }
     };
   }, [visible, isEnabled, isListening, startListening, stopListening]);
+
+  // Payment request handling is now done at the screen level to avoid unmounting issues
 
   const styles = StyleSheet.create({
     container: {
@@ -162,7 +192,7 @@ export function NFCPaymentModal({
           <Text style={styles.description}>
             Hold your phone near the NFC reader to share your wallet address.
             {'\n\n'}
-            Address: {walletAddress.slice(0, 20)}...
+            Address: {effectiveWalletAddress.slice(0, 20)}...
           </Text>
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
             <Text style={styles.cancelButtonText}>Cancel</Text>

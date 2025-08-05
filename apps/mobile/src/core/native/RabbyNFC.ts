@@ -45,12 +45,12 @@ class RabbyNFCWrapper {
     }
   }
 
-  async startHCE(): Promise<void> {
+  async startHCE(walletAddress?: string): Promise<void> {
     if (!this.isAvailable()) {
       throw new Error('RabbyNFC not available');
     }
     try {
-      await RabbyNFC.startHCE();
+      await RabbyNFC.startHCE(walletAddress || '');
     } catch (error) {
       console.error('RabbyNFC.startHCE error:', error);
       throw error;
@@ -105,6 +105,20 @@ class RabbyNFCWrapper {
     const subscription = this.eventEmitter.addListener(
       'nfcDisconnected',
       event => {
+        callback(event);
+      },
+    );
+
+    return () => subscription.remove();
+  }
+
+  onPaymentRequest(callback: (uri: string) => void): () => void {
+    if (!this.eventEmitter) return () => {};
+
+    const subscription = this.eventEmitter.addListener(
+      'paymentRequest',
+      event => {
+        console.log('RabbyNFC: paymentRequest event received:', event);
         callback(event);
       },
     );

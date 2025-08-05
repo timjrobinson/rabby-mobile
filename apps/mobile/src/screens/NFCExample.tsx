@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { NFCPaymentModal } from '@/components/NFCPayment';
 import { useTheme } from '@/hooks/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
