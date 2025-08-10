@@ -226,156 +226,50 @@ const NFCPaymentHandler = () => {
 
   React.useEffect(() => {
     const handlePaymentRequest = async (data: any) => {
-      console.log(
-        '[NFCPaymentHandler] Step 1: Received payment request event:',
-        data,
-      );
-      console.log('[NFCPaymentHandler] Step 2: Event type:', typeof data);
-      console.log(
-        '[NFCPaymentHandler] Step 3: Event keys:',
-        data ? Object.keys(data) : 'null',
-      );
-
       const uri = typeof data === 'string' ? data : data?.uri;
-      console.log('[NFCPaymentHandler] Step 4: Extracted URI:', uri);
 
-      if (!uri) {
-        console.error(
-          '[NFCPaymentHandler] Step 5: ERROR - No URI in payment request',
-        );
+      if (!uri || !isAppUnlocked) {
         return;
       }
-
-      console.log(
-        '[NFCPaymentHandler] Step 5: App unlocked status:',
-        isAppUnlocked,
-      );
-      if (!isAppUnlocked) {
-        console.log(
-          '[NFCPaymentHandler] Step 6: ERROR - App is locked, cannot process payment',
-        );
-        return;
-      }
-
-      console.log('[NFCPaymentHandler] Step 6: Processing ERC-681 URI:', uri);
 
       // First try using the same deep link handler that works for other intents
       try {
-        console.log(
-          '[NFCPaymentHandler] Step 7: Attempting to handle deep link directly',
-        );
         const result = await handleDeepLink(uri);
-        console.log(
-          '[NFCPaymentHandler] Step 8: Deep link handler result:',
-          result,
-        );
-        console.log(
-          '[NFCPaymentHandler] Step 9: Result handled:',
-          result.handled,
-        );
-        console.log(
-          '[NFCPaymentHandler] Step 10: Result navigation:',
-          result.navigation,
-        );
 
         if (result.handled && result.navigation) {
           if (result.navigation.screen === 'SendERC681') {
-            console.log(
-              '[NFCPaymentHandler] Step 11: Navigation screen is SendERC681',
-            );
-            console.log(
-              '[NFCPaymentHandler] Step 12: Navigation params:',
-              JSON.stringify(result.navigation.params, null, 2),
-            );
-
             // Small delay to ensure app is ready
             setTimeout(() => {
-              console.log(
-                '[NFCPaymentHandler] Step 13: Calling navigateToSendPolyScreen',
-              );
               navigateToSendPolyScreen(true, result.navigation.params);
-              console.log(
-                '[NFCPaymentHandler] Step 14: Navigation triggered successfully',
-              );
             }, 500);
-          } else {
-            console.log(
-              '[NFCPaymentHandler] Step 11: ERROR - Unexpected navigation screen:',
-              result.navigation.screen,
-            );
           }
         } else {
-          console.log(
-            '[NFCPaymentHandler] Step 11: ERROR - Deep link not handled or no navigation',
-          );
-          console.log(
-            '[NFCPaymentHandler] Step 12: Falling back to Linking.openURL',
-          );
-
           // Fallback: Use Linking to trigger the existing deep link handling
           const { Linking } = require('react-native');
-
           setTimeout(async () => {
             try {
-              console.log(
-                '[NFCPaymentHandler] Step 13: Calling Linking.openURL with:',
-                uri,
-              );
               await Linking.openURL(uri);
-              console.log(
-                '[NFCPaymentHandler] Step 14: Linking.openURL completed successfully',
-              );
             } catch (error) {
-              console.error(
-                '[NFCPaymentHandler] Step 14: ERROR - Linking.openURL failed:',
-                error,
-              );
-              console.error(
-                '[NFCPaymentHandler] Step 15: Error details:',
-                JSON.stringify(error, null, 2),
-              );
+              // Silent fail
             }
           }, 500);
         }
       } catch (error) {
-        console.error(
-          '[NFCPaymentHandler] Step 7: ERROR - Exception in deep link handling:',
-          error,
-        );
-        console.error('[NFCPaymentHandler] Step 8: Error stack:', error.stack);
-
         // Try Linking as last resort
-        console.log(
-          '[NFCPaymentHandler] Step 9: Attempting Linking.openURL as fallback',
-        );
         const { Linking } = require('react-native');
-
         setTimeout(async () => {
           try {
             await Linking.openURL(uri);
-            console.log(
-              '[NFCPaymentHandler] Step 10: Fallback Linking.openURL succeeded',
-            );
           } catch (linkError) {
-            console.error(
-              '[NFCPaymentHandler] Step 10: ERROR - Fallback also failed:',
-              linkError,
-            );
+            // Silent fail
           }
         }, 500);
       }
     };
 
-    console.log(
-      '[NFCPaymentHandler] Initialization: Setting up NFC payment listener',
-    );
     nfcService.on('paymentRequest', handlePaymentRequest);
-    console.log(
-      '[NFCPaymentHandler] Initialization: Listener registered successfully',
-    );
 
     return () => {
-      console.log('[NFCPaymentHandler] Cleanup: Removing NFC payment listener');
       nfcService.off('paymentRequest', handlePaymentRequest);
     };
   }, [isAppUnlocked, navigateToSendPolyScreen]);

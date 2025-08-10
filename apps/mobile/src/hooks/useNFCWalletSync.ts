@@ -17,24 +17,17 @@ export function useNFCWalletSync() {
       return;
     }
 
-    console.log('[useNFCWalletSync] Hook initialized, currentAccount:', currentAccount);
-    
     // Also try to get from preference service directly
     const prefAccount = preferenceService.getCurrentAccount();
-    console.log('[useNFCWalletSync] Account from preference service:', prefAccount);
-    
     const accountToUse = currentAccount || prefAccount;
-    
+
     if (accountToUse?.address) {
       const walletAddress = `eip155:1:${accountToUse.address}`;
-      console.log('[useNFCWalletSync] Updating NFC wallet address:', walletAddress);
-      
+
       // Update the NFC service with the current wallet address
-      nfcService.setWalletAddress(walletAddress).catch(error => {
-        console.error('[useNFCWalletSync] Failed to update NFC wallet address:', error);
+      nfcService.setWalletAddress(walletAddress).catch(() => {
+        // Silent fail
       });
-    } else {
-      console.log('[useNFCWalletSync] No account available to sync');
     }
   }, [currentAccount]);
 }
