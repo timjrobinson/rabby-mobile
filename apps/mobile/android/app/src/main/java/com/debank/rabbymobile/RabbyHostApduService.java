@@ -4,6 +4,7 @@ import android.nfc.cardemulation.HostApduService;
 import android.os.Bundle;
 import android.util.Log;
 import android.content.SharedPreferences;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import androidx.core.content.ContextCompat;

@@ -391,7 +391,7 @@ function SendScreen({
       // After token is loaded, convert raw amount if needed
       if (navParams?.isRawAmount && navParams?.rawAmount) {
         // Wait to ensure token is fully loaded with balance
-        await sleep(200);
+        await sleep(500);
 
         // Get fresh token info to ensure we have decimals
         const tokenInfo = await openapi.getToken(
@@ -414,8 +414,13 @@ function SendScreen({
             setTimeout(() => {
               // Force re-validation by setting the same value again
               handleFieldChange('amount', convertedAmount);
+
+              // Try one more time after another delay if needed
+              setTimeout(() => {
+                handleFieldChange('amount', convertedAmount);
+              }, 800);
             }, 500);
-          }, 100);
+          }, 300);
         }
       }
     } finally {
