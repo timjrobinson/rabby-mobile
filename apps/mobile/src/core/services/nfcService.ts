@@ -12,8 +12,7 @@ export interface NFCServiceEvents {
   error: { error: Error };
 }
 
-// const AID_RABBY = 'F05241424259'; // RABBY
-const AID_RABBY = 'F046524545504159'; // FREEPAY
+const AID_RABBY = 'F05241424259'; // RABBY
 
 class NFCService extends EventEmitter {
   private store: NFCServiceStore = {
@@ -89,8 +88,11 @@ class NFCService extends EventEmitter {
   }
 
   async startHostCardEmulation(walletAddress?: string) {
-    console.log('[nfcService] startHostCardEmulation called with:', walletAddress);
-    
+    console.log(
+      '[nfcService] startHostCardEmulation called with:',
+      walletAddress,
+    );
+
     if (!this.isInitialized) {
       console.log('[nfcService] Not initialized, initializing first');
       await this.init();
@@ -102,7 +104,10 @@ class NFCService extends EventEmitter {
         await this.stopHostCardEmulation();
       }
 
-      console.log('[nfcService] Calling RabbyNFC.startHCE with:', walletAddress);
+      console.log(
+        '[nfcService] Calling RabbyNFC.startHCE with:',
+        walletAddress,
+      );
       await RabbyNFC.startHCE(walletAddress);
       this.isListening = true;
       this.store.lastReadTime = Date.now();
@@ -130,7 +135,7 @@ class NFCService extends EventEmitter {
 
   async setWalletAddress(walletAddress: string) {
     console.log('[nfcService] Setting wallet address:', walletAddress);
-    
+
     if (!this.isInitialized) {
       console.log('[nfcService] Not initialized, initializing first');
       await this.init();

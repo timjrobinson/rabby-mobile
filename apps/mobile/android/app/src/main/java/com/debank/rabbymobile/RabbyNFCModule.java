@@ -33,9 +33,9 @@ public class RabbyNFCModule extends ReactContextBaseJavaModule implements Activi
         (byte) 0xA4, // INS
         (byte) 0x04, // P1
         (byte) 0x00, // P2
-        (byte) 0x08, // Length of AID
-        (byte) 0xF0, (byte) 0x46, (byte) 0x52, (byte) 0x45, 
-        (byte) 0x45, (byte) 0x50, (byte) 0x41, (byte) 0x59, // AID: F046524545504159
+        (byte) 0x06, // Length of AID (6 bytes for F05241424259)
+        (byte) 0xF0, (byte) 0x52, (byte) 0x41, 
+        (byte) 0x42, (byte) 0x42, (byte) 0x59, // AID: F05241424259 (RABBY)
         (byte) 0x00  // Le
     };
     

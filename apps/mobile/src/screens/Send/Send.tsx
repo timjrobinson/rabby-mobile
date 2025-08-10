@@ -390,18 +390,32 @@ function SendScreen({
 
       // After token is loaded, convert raw amount if needed
       if (navParams?.isRawAmount && navParams?.rawAmount) {
-        // Get the loaded token info
-        const loadedToken = await openapi.getToken(
+        // Wait to ensure token is fully loaded with balance
+        await sleep(200);
+
+        // Get fresh token info to ensure we have decimals
+        const tokenInfo = await openapi.getToken(
           currentAccount!.address,
           targetToken.chain,
           targetToken.id,
         );
 
-        if (loadedToken?.decimals !== undefined) {
+        if (tokenInfo?.decimals !== undefined) {
           const convertedAmount = new BigNumber(navParams.rawAmount)
-            .dividedBy(new BigNumber(10).pow(loadedToken.decimals))
+            .dividedBy(new BigNumber(10).pow(tokenInfo.decimals))
             .toFixed();
-          handleFieldChange('amount', convertedAmount);
+
+          // Set the amount and let it trigger validation naturally
+          // Add a small delay to ensure token state is ready
+          setTimeout(() => {
+            handleFieldChange('amount', convertedAmount);
+
+            // Trigger a re-validation after a delay to work around the stale token issue
+            setTimeout(() => {
+              // Force re-validation by setting the same value again
+              handleFieldChange('amount', convertedAmount);
+            }, 500);
+          }, 100);
         }
       }
     } finally {

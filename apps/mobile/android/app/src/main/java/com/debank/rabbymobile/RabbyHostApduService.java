@@ -31,9 +31,9 @@ public class RabbyHostApduService extends HostApduService {
     private static final String CHANNEL_ID = "RabbyNFC";
     private static final int NOTIFICATION_ID = 9999;
     
-    // AID for FreePay (for testing compatibility)
+    // AID for Rabby
     private static final String SELECT_AID = "00A40400";
-    private static final String AID = "F046524545504159";
+    private static final String AID = "F05241424259";
     
     // Status words
     private static final byte[] SW_SUCCESS = {(byte) 0x90, 0x00};
